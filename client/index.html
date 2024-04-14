@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Example</title>
+</head>
+<body>
+    <h1>AI Photo Service</h1>
+
+    <h2>Upload Image</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <div>
+            <label for="imageInput">Select Image:</label>
+            <input type="file" id="imageInput" accept="image/*" required>
+        </div>
+        <div>
+            <label for="imageLabels">Custom Labels:</label>
+            <input type="text" id="imageLabels">
+        </div>
+        <button type="button" onclick="handleUpload()">Upload</button>
+    </form>
+
+    <!-- <h2>Upload Photo</h2>
+    <form action="/upload" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <input type="text" name="labels">
+        <button id="uploadImageButton">Upload</button>
+    </form> -->
+
+    <!-- <button id="fetchUsersButton">Fetch Users</button> -->
+
+    <!-- <div id="userList"></div> -->
+
+    <script type="text/javascript" src="api_sdk/"></script>
+    <script type="text/javascript" src="api_sdk/lib/axios/dist/axios.standalone.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/CryptoJS/rollups/sha256.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/CryptoJS/components/hmac.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/CryptoJS/components/enc-base64.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/url-template/url-template.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/apiGatewayCore/sigV4Client.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/apiGatewayCore/simpleHttpClient.js"></script>
+    <script type="text/javascript" src="api_sdk/lib/apiGatewayCore/utils.js"></script>
+    <script type="text/javascript" src="api_sdk/apigClient.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+        const MyAPI = apigClientFactory.newClient();
+        const BASE_URL = 'https://7z1q6hpgd5.execute-api.us-east-1.amazonaws.com/testing'
+        
+        function handleUpload() {
+            const imageFile = document.getElementById('imageInput').files[0];
+            const imageLabels = document.getElementById('imageLabels').value;
+            console.log(imageFile)
+            console.log(imageLabels)
+
+            $.ajax({
+                url: `${BASE_URL}/upload?name=${imageFile.name}`,
+                type: 'PUT',
+                data: imageFile,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'x-amz-meta-customLabels': imageLabels,
+                    'x-api-key': 'euYe4NmByk4uxBrc9aNBB9A1ticTxYgK30gh1otR'
+                },
+                success: function (data) {
+                    console.log('File uploaded successfully:', data);
+                },
+                error: function (xhr, status, error) {
+                    // console.log(xhr)
+                    // console.log(status)
+                    // console.error('Error uploading file:', error);
+                }
+            });
+
+            // params = {
+            //     "name": imageFile.name,
+            //     "x-amz-meta-customlabels": imageLabels,
+            // }
+            // additional_params = {
+            //     headers:{
+            //         "Content-Type": imageFile.type,
+            //     }
+            // }
+            // MyAPI.uploadPut(params, imageFile, additional_params)
+            // .then(response => {
+            //     console.log(response)
+            // }).catch(error => {
+            //     console.error('Error uploading image:', error);
+            // });
+            // MyAPI.uploadPut()
+            // const uploadForm = document.getElementById('uploadForm');
+
+            // const formData = new FormData();
+            // formData.append('image', imageInput.files[0]);
+            // formData.append('labels', imageLabels.value);
+
+        }
+        // Assuming the SDK is imported as MyAPI
+        // const uploadImageButton = document.getElementById('uploadImageButton');
+        // const userList = document.getElementById('userList');
+    </script>
+</body>
+</html>
