@@ -1,0 +1,11 @@
+version: 0.2
+phases:
+  build:
+    commands:
+      - echo "Copying necessary frontend files..."
+      - mkdir -p build
+      - cp -R client/* build/
+artifacts:
+  files:
+    - '**/*'
+  base-directory: 'build'
