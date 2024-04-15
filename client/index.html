@@ -3,10 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontend Example</title>
+    <title>AI Photo Search</title>
+    <style>
+        #results img {
+            width: 100%; /* Adjusts the width to 100% of its container */
+            height: auto; /* Adjusts the height to maintain aspect ratio */
+            max-width: 300px; /* Sets a maximum width for each image */
+            max-height: 300px; /* Sets a maximum height for each image */
+            object-fit: contain; /* Ensures the image fits nicely in the element, maintaining aspect ratio */
+        }
+        #results div {
+            margin: 10px;
+            border: 1px solid #ccc;
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
     <h1>AI Photo Service</h1>
+
+    <h2>Search</h2>
+    <div>
+        <input type="text" id="searchQuery">
+        <button type="button" onclick="searchImages()">Submit</button>
+    </div>
+    <div id="results"></div>
 
     <h2>Upload Image</h2>
     <form id="uploadForm" enctype="multipart/form-data">
@@ -46,7 +67,8 @@
     <script type="text/javascript" src="api_sdk/apigClient.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script>
-        const MyAPI = apigClientFactory.newClient();
+        const apiKey = 'euYe4NmByk4uxBrc9aNBB9A1ticTxYgK30gh1otR';
+        const MyAPI = apigClientFactory.newClient({apiKey: apiKey});
         const BASE_URL = 'https://7z1q6hpgd5.execute-api.us-east-1.amazonaws.com/testing'
         
         function handleUpload() {
@@ -63,7 +85,7 @@
                 contentType: false,
                 headers: {
                     'x-amz-meta-customLabels': imageLabels,
-                    'x-api-key': 'euYe4NmByk4uxBrc9aNBB9A1ticTxYgK30gh1otR'
+                    'x-api-key': apiKey
                 },
                 success: function (data) {
                     console.log('File uploaded successfully:', data);
@@ -71,32 +93,38 @@
                 error: function (xhr, status, error) {
                     // console.log(xhr)
                     // console.log(status)
-                    // console.error('Error uploading file:', error);
+                    console.error('Error uploading file:', error);
                 }
             });
 
-            // params = {
-            //     "name": imageFile.name,
-            //     "x-amz-meta-customlabels": imageLabels,
-            // }
-            // additional_params = {
-            //     headers:{
-            //         "Content-Type": imageFile.type,
-            //     }
-            // }
-            // MyAPI.uploadPut(params, imageFile, additional_params)
-            // .then(response => {
-            //     console.log(response)
-            // }).catch(error => {
-            //     console.error('Error uploading image:', error);
+        }
+
+        function searchImages() {
+            const query = document.getElementById('searchQuery').value;
+            console.log(query)
+            MyAPI.searchGet({q: query}, {}, {}).then(response => {
+                console.log(response)
+                const results = response.data.results;
+                let htmlContent = '';
+                if (results.length   > 0) {
+                    results.forEach(result => {
+                        htmlContent += `<div><img src="${result.url}" alt="Image"><p>${result.labels.join(', ')}</p></div>`;
+                    });
+                } else {
+                    htmlContent = '<p>No results found.</p>';
+                }
+                document.getElementById('results').innerHTML = htmlContent;
+            }).catch(error => {
+                console.error('Error searching images:', error);
+            })
+            //     const results = data.results;
+            // $.get(`${BASE_URL}?q=${query}`, function(data) {
+            //     let htmlContent = '';
+            //     results.forEach(result => {
+            //         htmlContent += `<div><img src="${result.url}" alt="Image"><p>${result.labels.join(', ')}</p></div>`;
+            //     });
+            //     document.getElementById('results').innerHTML = htmlContent;
             // });
-            // MyAPI.uploadPut()
-            // const uploadForm = document.getElementById('uploadForm');
-
-            // const formData = new FormData();
-            // formData.append('image', imageInput.files[0]);
-            // formData.append('labels', imageLabels.value);
-
         }
         // Assuming the SDK is imported as MyAPI
         // const uploadImageButton = document.getElementById('uploadImageButton');
