@@ -6,7 +6,7 @@ phases:
       python: 3.12
     commands:
       - echo Installing shared dependencies...
-      - pip install -r requirements.txt -t /tmp/dependencies
+      - pip install -r ./lambdas/requirements.txt -t /tmp/dependencies
 
   pre_build:
     commands:
