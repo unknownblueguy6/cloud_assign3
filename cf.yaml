@@ -1,0 +1,404 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup for Lambda functions, API Gateway, and S3 buckets for photo storage and static website hosting.
+
+Parameters:
+  LambdaBuildS3BucketName:
+    Type: String
+    Description: S3 bucket containing all artifacts including Lambda code and OpenAPI spec
+  SearchPhotosS3Key:
+    Type: String
+    Description: S3 object key for the search-photos Lambda function code
+  IndexPhotosS3Key:
+    Type: String
+    Description: S3 object key for the index-photos Lambda function code
+  OSUser:
+    Type: String
+    Description: OpenSearch Username
+  OSPass:
+    Type: String
+    Description: OpenSearch Password
+    NoEcho: true
+
+Resources:
+  IndexPhotosLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonRekognitionFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+  
+  SearchPhotosLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonLexFullAccess'
+
+  ApiGatewayS3FullAccessRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'apigateway.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonAPIGatewayPushToCloudWatchLogs'
+
+  SearchPhotosLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: 'lambda_function.lambda_handler'
+      Role: !GetAtt SearchPhotosLambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref LambdaBuildS3BucketName
+        S3Key: !Ref SearchPhotosS3Key
+      Runtime: 'python3.12' 
+      Environment:
+        Variables:
+          OS_USER: !Ref OSUser
+          OS_PASS: !Ref OSPass
+      FunctionName: 'search-photos-cf'
+      MemorySize: 128
+      Timeout: 30
+
+  IndexPhotosLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: 'lambda_function.lambda_handler'
+      Role: !GetAtt IndexPhotosLambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref LambdaBuildS3BucketName
+        S3Key: !Ref IndexPhotosS3Key
+      Runtime: 'python3.12'
+      Environment:
+        Variables:
+          OS_USER: !Ref OSUser
+          OS_PASS: !Ref OSPass
+      FunctionName: 'index-photos-cf'
+      MemorySize: 128
+      Timeout: 30
+
+  MyApiGateway:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: 'AI Photo Service-CF'
+      Body:
+        openapi: "3.0.1"
+        info:
+          title: "AI Photo Search"
+          description: "AI Photo Search application, built during the Cloud and Big Data course at New York University."
+          version: "1.0.0"
+        paths:
+          /search:
+            get:
+              operationId: "searchPhotos"
+              parameters:
+              - name: "q"
+                in: "query"
+                required: true
+                schema:
+                  type: "string"
+              responses:
+                "500":
+                  description: "500 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                "200":
+                  description: "200 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/SearchResponse"
+                "403":
+                  description: "403 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+              security:
+              - api_key: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SearchPhotosLambdaFunction.Arn}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                requestParameters:
+                  integration.request.querystring.q: "method.request.querystring.q"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              responses:
+                "200":
+                  description: "200 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: "string"
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: "string"
+                  content: {}
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /upload:
+            put:
+              operationId: "uploadPhoto"
+              parameters:
+              - name: "x-amz-meta-customlabels"
+                in: "header"
+                required: true
+                schema:
+                  type: "string"
+              - name: "name"
+                in: "query"
+                required: true
+                schema:
+                  type: "string"
+              responses:
+                "500":
+                  description: "500 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                "200":
+                  description: "200 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/MODEL575b17"
+                "403":
+                  description: "403 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+              security:
+              - api_key: []
+              x-amazon-apigateway-integration:
+                credentials: !GetAtt ApiGatewayS3FullAccessRole.Arn
+                httpMethod: "PUT"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:s3:path/${PhotosBucket}/${IndexPhotosS3Key}"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestParameters:
+                  integration.request.path.key: "method.request.querystring.name"
+                  integration.request.header.x-amz-meta-customlabels: "method.request.header.x-amz-meta-customlabels"
+                  integration.request.path.bucket: !Ref PhotosBucket
+                passthroughBehavior: "when_no_templates"
+                contentHandling: "CONVERT_TO_BINARY"
+                type: "aws"
+            options:
+              responses:
+                "200":
+                  description: "200 response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: "string"
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: "string"
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: "string"
+                  content: {}
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'OPTIONS,PUT'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-amz-meta-customlabels'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+        components:
+          schemas:
+            MODEL575b17:
+              type: "object"
+            Error:
+              type: "object"
+              properties:
+                code:
+                  type: "integer"
+                  format: "int32"
+                message:
+                  type: "string"
+            Photo:
+              type: "object"
+              properties:
+                url:
+                  type: "string"
+                labels:
+                  type: "array"
+                  items:
+                    type: "string"
+            SearchResponse:
+              type: "object"
+              properties:
+                results:
+                  type: "array"
+                  items:
+                    $ref: "#/components/schemas/Photo"
+          securitySchemes:
+            api_key:
+              type: "apiKey"
+              name: "x-api-key"
+              in: "header"
+        x-amazon-apigateway-gateway-responses:
+          DEFAULT_4XX:
+            responseParameters:
+              gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+              gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-amz-meta-customlabels'"
+          DEFAULT_5XX:
+            responseParameters:
+              gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+              gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-amz-meta-customlabels'"
+        x-amazon-apigateway-binary-media-types:
+        - "image/png"
+        - "image/jpeg"
+        - "image/jpg"
+
+  ApiGatewayDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn:
+      - MyApiGateway
+    Properties:
+      RestApiId: !Ref MyApiGateway
+      Description: 'Deployment for AI Photo Service API'
+      StageName: 'prod'
+
+  PhotosBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: "photos-cc-a3-cf"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt IndexPhotosLambdaFunction.Arn
+
+  PhotosBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref PhotosBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "PublicGetObject"
+            Effect: "Allow"
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${PhotosBucket}/*"
+          - Sid: "APIGatewayPutObject"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/APIGatewayExecutionRole"
+            Action: "s3:PutObject"
+            Resource: !Sub "arn:aws:s3:::${PhotosBucket}/*"
+  
+  PhotosBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt IndexPhotoLambdaFunction.Arn
+      Principal: "s3.amazonaws.com"
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt PhotosBucket.Arn
+
+
+  FrontendBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: "frontend-cc-a3-cf"
+      WebsiteConfiguration:
+        IndexDocument: 'index.html'
+
+  FrontendBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "PublicReadGetObject"
+            Effect: "Allow"
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${FrontendBucket}/*"
+
+Outputs:
+  ApiGatewayUrl:
+    Description: "URL of the AI Photo Service API Gateway"
+    Value: !Sub "https://${MyApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+  PhotosBucketURL:
+    Description: "URL for the photos bucket"
+    Value: !GetAtt PhotosBucket.WebsiteURL
+  FrontendBucketURL:
+    Description: "URL for the static website hosted on S3"
+    Value: !GetAtt FrontendBucket.WebsiteURL

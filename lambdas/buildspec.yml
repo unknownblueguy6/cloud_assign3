@@ -1,0 +1,32 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - echo Installing shared dependencies...
+      - pip install -r requirements.txt -t /tmp/dependencies
+
+  pre_build:
+    commands:
+      - echo Pre-build phase...
+
+  build:
+    commands:
+      - echo Building the search-photos Lambda function...
+      - cp -r /tmp/dependencies ./search-photos
+      - cd search-photos
+      - zip -r9 ../search-photos.zip .
+      - cd ..
+      - echo Building the index-photos Lambda function...
+      - cp -r /tmp/dependencies ./index-photos
+      - cd index-photos
+      - zip -r9 ../index-photos.zip .
+      - cd ..
+
+artifacts:
+  files:
+    - search-photos.zip
+    - index-photos.zip
+    - ../cf.yaml
