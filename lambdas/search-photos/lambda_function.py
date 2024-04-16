@@ -14,6 +14,7 @@ auth = (os.environ.get("OS_USER"), os.environ.get("OS_PASS"))
 os_client = OpenSearch(
         hosts = [{'host': os_domain, 'port':443,}],
         http_compress = True,
+        http_auth = auth,
         use_ssl = True,
         verify_certs = True,
         ssl_assert_hostname = False,
@@ -38,10 +39,13 @@ def make_query(labels):
         ]
     }
 
-    response = os_client.search(
-        body = query,
-        index = os_index
-    )
+    try: 
+        response = os_client.search(
+            body = query,
+            index = os_index
+        )
+    except:
+        return []
     
     results = []
 
