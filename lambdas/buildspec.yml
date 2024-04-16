@@ -15,6 +15,7 @@ phases:
   build:
     commands:
       - echo Building the search-photos Lambda function...
+      - cd ./lambdas
       - cp -r /tmp/dependencies ./search-photos
       - cd search-photos
       - zip -r9 ../search-photos.zip .
@@ -30,15 +31,15 @@ phases:
       - echo Updating code for the search-photos Lambda function...
       - >
         aws lambda update-function-code --function-name search-photos 
-        --zip-file fileb://search-photos.zip 
+        --zip-file fileb://lambdas/search-photos.zip 
       
       - echo Updating code for the index-photos Lambda function...
       - >
         aws lambda update-function-code --function-name index-photos 
-        --zip-file fileb://index-photos.zip 
+        --zip-file fileb://lambdas/index-photos.zip 
 
 
 artifacts:
   files:
-    - search-photos.zip
-    - index-photos.zip
+    - lambdas/search-photos.zip
+    - lambdas/index-photos.zip
