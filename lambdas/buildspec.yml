@@ -27,14 +27,20 @@ phases:
 
 post_build:
   commands:
-    - echo Updating environment variables for the search-photos Lambda function...
+    - echo Updating environment variables and deploying the search-photos Lambda function...
     - >
-      aws lambda update-function-configuration --function-name search-photos-test 
+      aws lambda update-function-configuration --function-name search-photos 
       --environment "Variables={OS_USER='$OS_USER',OS_PASS='$OS_PASS'}"
-    - echo Updating environment variables for the index-photos Lambda function...
     - >
-      aws lambda update-function-configuration --function-name index-photos-test 
+      aws lambda update-function-code --function-name search-photos 
+      --zip-file fileb://search-photos.zip
+    - echo Updating environment variables and deploying the index-photos Lambda function...
+    - >
+      aws lambda update-function-configuration --function-name index-photos 
       --environment "Variables={OS_USER='$OS_USER',OS_PASS='$OS_PASS'}"
+    - >
+      aws lambda update-function-code --function-name index-photos
+      --zip-file fileb://index-photos.zip
 
 artifacts:
   files:
