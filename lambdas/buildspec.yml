@@ -16,12 +16,12 @@ phases:
     commands:
       - echo Building the search-photos Lambda function...
       - cd ./lambdas
-      - cp -r /tmp/dependencies ./search-photos
+      - cp -r /tmp/dependencies/. ./search-photos
       - cd search-photos
       - zip -r9 ../search-photos.zip .
       - cd ..
       - echo Building the index-photos Lambda function...
-      - cp -r /tmp/dependencies ./index-photos
+      - cp -r /tmp/dependencies/. ./index-photos
       - cd index-photos
       - zip -r9 ../index-photos.zip .
       - cd ..
