@@ -25,6 +25,7 @@ phases:
       - cd index-photos
       - zip -r9 ../index-photos.zip .
       - cd ..
+      - ls -al
 
   post_build:
     commands:
