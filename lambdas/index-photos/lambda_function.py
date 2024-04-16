@@ -9,14 +9,13 @@ from opensearchpy import OpenSearch
 s3_client = boto3.client('s3')
 rekognition_client = boto3.client('rekognition')
 
-# Assume Elasticsearch domain URL and index are defined
 os_domain = 'search-photos-qa7gktwgjplnxsefhwwci7xl2u.aos.us-east-1.on.aws'
 os_index = 'photos'
 auth = (os.environ.get("OS_USER"), os.environ.get("OS_PASS"))
 
 os_client = OpenSearch(
         hosts = [{'host': os_domain, 'port':443,}],
-        http_compress = True, # enables gzip compression for request bodies
+        http_compress = True,
         http_auth = auth,
         use_ssl = True,
         verify_certs = True,
@@ -26,38 +25,28 @@ os_client = OpenSearch(
 
 
 def hash_string(input_string):
-    # Create a hashlib object
     hasher = hashlib.sha256()
-    
-    # Update the hasher with the input string
     hasher.update(input_string.encode('utf-8'))
-    
-    # Get the hexadecimal representation of the hash
     hashed_output = hasher.hexdigest()
-    
+   
     return hashed_output
 
 def index_document(doc):
     return os_client.index(index=os_index, body=doc, id=hash_string(doc["objectKey"]))
-    # url = f"https://{os_domain}/{os_index}/_doc"
-    # response = requests.post(url, json=doc, auth=auth)
-    # return response.json()
 
-def lambda_handler(event, context):
-    
-    # Get the bucket name and object key from the event
+
+def lambda_handler(event, context):    
     bucket_name = event['Records'][0]['s3']['bucket']['name']
     object_key = event['Records'][0]['s3']['object']['key']
     
-    # print(f"Bucket: {bucket_name}, Object Key: {object_key}")
     print(f"Debug Event: {event}")
     
     # Retrieve the object's metadata
     metadata_response = s3_client.head_object(Bucket=bucket_name, Key=object_key)
     metadata = metadata_response.get('Metadata', {})
-    # print(metadata)
+
     # Extract the 'customlabels' metadata, if it exists
-    custom_labels_str = metadata.get('customlabels')  # Metadata keys are lowercase
+    custom_labels_str = metadata.get('customlabels')
     custom_labels = custom_labels_str.split(',') if custom_labels_str else []
     custom_labels = [label.strip() for label in custom_labels]
     print(f"Custom Labels: {custom_labels}")
@@ -77,8 +66,6 @@ def lambda_handler(event, context):
         },
         MaxLabels = 10
     )
-    
-    print(response)
 
     # Process Rekognition response and extract labels
     rekognition_labels = [label_data['Name'] for label_data in response['Labels']]
@@ -95,8 +82,8 @@ def lambda_handler(event, context):
     document = {
         "objectKey": object_key,
         "bucket": bucket_name,
-        "labels": labels,  # Assume this includes both Rekognition and custom labels
-        "createdTimestamp": metadata_response['LastModified'].isoformat()  # From S3 head_object
+        "labels": labels,
+        "createdTimestamp": metadata_response['LastModified'].isoformat()
     }
 
     # Index the document in Elasticsearch
@@ -110,5 +97,5 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 200,
-        'body': json.dumps('Image indexing complete.')
+        'body': json.dumps(f'{object_key} indexing complete.')
     }

@@ -25,8 +25,18 @@ phases:
       - zip -r9 ../index-photos.zip .
       - cd ..
 
+post_build:
+  commands:
+    - echo Updating environment variables for the search-photos Lambda function...
+    - >
+      aws lambda update-function-configuration --function-name search-photos-test 
+      --environment "Variables={OS_USER='$OS_USER',OS_PASS='$OS_PASS'}"
+    - echo Updating environment variables for the index-photos Lambda function...
+    - >
+      aws lambda update-function-configuration --function-name index-photos-test 
+      --environment "Variables={OS_USER='$OS_USER',OS_PASS='$OS_PASS'}"
+
 artifacts:
   files:
     - search-photos.zip
     - index-photos.zip
-    - ../cf.yaml

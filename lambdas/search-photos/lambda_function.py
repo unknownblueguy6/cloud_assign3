@@ -10,11 +10,10 @@ rekognition_client = boto3.client('rekognition')
 os_domain = 'search-photos-qa7gktwgjplnxsefhwwci7xl2u.aos.us-east-1.on.aws'
 os_index = 'photos'
 auth = (os.environ.get("OS_USER"), os.environ.get("OS_PASS"))
-# auth = ("mrityunjay", "Hello@123")
+
 os_client = OpenSearch(
         hosts = [{'host': os_domain, 'port':443,}],
-        http_compress = True, # enables gzip compression for request bodies
-        http_auth = auth,
+        http_compress = True,
         use_ssl = True,
         verify_certs = True,
         ssl_assert_hostname = False,
@@ -46,17 +45,10 @@ def make_query(labels):
     
     results = []
 
-    # Check if there are any hits in the response
     if response['hits']['total']['value'] > 0:
-        # Iterate over each hit/document returned by the search
         for hit in response['hits']['hits']:
-            # Construct the S3 URL based on the bucket and object key
             s3_url = f"https://s3.amazonaws.com/{hit['_source']['bucket']}/{hit['_source']['objectKey']}"
-            
-            # Extract the labels array
             labels = hit['_source']['labels']
-            
-            # Create an object with the S3 URL and labels, and add it to the results list
             results.append({'url': s3_url, 'labels': labels})
 
     print(results)
@@ -65,20 +57,17 @@ def make_query(labels):
 
 def lambda_handler(event, context):
     print(event)
-    # print("EVENT --- {}".format(json.dumps(event)))
-    
-    # q = "show me photos of cars and bikes"
+
     q = event['queryStringParameters']['q']
+    print(q)
+    
     # Specify your Lex V2 bot details
     bot_id = "UBYYIGGUJO"  
     bot_alias_id = "TSTALIASID"  
     locale_id = "en_US"  
     session_id = event.get('sessionId', 'testuser')
     
-    # user_message = event['messages'][0]['unstructured']['text']
-    # user_message = event['inputTranscript']
     user_message = q
-    print(q)
     
     response = client.recognize_text(
         botId=bot_id,
