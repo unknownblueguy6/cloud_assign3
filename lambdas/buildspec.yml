@@ -25,19 +25,21 @@ phases:
       - cd index-photos
       - zip -r9 ../index-photos.zip .
       - cd ..
-      - ls -al
 
   post_build:
     commands:
+      - pwd
+      - ls -al
       - echo Updating code for the search-photos Lambda function...
       - >
         aws lambda update-function-code --function-name search-photos 
-        --zip-file fileb://lambdas/search-photos.zip 
-      
+        --zip-file fileb://lambdas/search-photos.zip
+        
       - echo Updating code for the index-photos Lambda function...
       - >
         aws lambda update-function-code --function-name index-photos 
-        --zip-file fileb://lambdas/index-photos.zip 
+        --zip-file fileb://lambdas/index-photos.zip
+
 
 
 artifacts:
