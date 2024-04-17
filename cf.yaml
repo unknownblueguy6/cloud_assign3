@@ -14,13 +14,6 @@ Parameters:
     Type: String
     Description: S3 object key for the index-photos Lambda function code
     Default: lambdas/index-photos.zip
-  # OSUser:
-  #   Type: String
-  #   Description: OpenSearch Username
-  # OSPass:
-  #   Type: String
-  #   Description: OpenSearch Password
-  #   NoEcho: true
 
 Resources:
   IndexPhotosLambdaExecutionRole:
