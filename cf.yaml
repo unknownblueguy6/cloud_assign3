@@ -62,7 +62,7 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonAPIGatewayPushToCloudWatchLogs'
+        - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
 
   SearchPhotosLambdaFunction:
     Type: 'AWS::Lambda::Function'
@@ -361,7 +361,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: "lambda:InvokeFunction"
-      FunctionName: !GetAtt IndexPhotoLambdaFunction.Arn
+      FunctionName: !GetAtt IndexPhotosLambdaFunction.Arn
       Principal: "s3.amazonaws.com"
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !GetAtt PhotosBucket.Arn
@@ -373,6 +373,11 @@ Resources:
       BucketName: "frontend-cc-a3-cf"
       WebsiteConfiguration:
         IndexDocument: 'index.html'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
 
   FrontendBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
