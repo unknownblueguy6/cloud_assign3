@@ -98,8 +98,10 @@ Resources:
         openapi: "3.0.1"
         info:
           title: "AI Photo Search"
-          description: "AI Photo Search application, built during the Cloud and Big Data course at New York University."
+          description: "AI Photo Search application, built during the Cloud and Big Data course\
+            \ at New York University."
           version: "1.0.0"
+
         paths:
           /search:
             get:
@@ -145,7 +147,7 @@ Resources:
               - api_key: []
               x-amazon-apigateway-integration:
                 httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SearchPhotosLambdaFunction.Arn}/invocations"
+                uri: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:339712725968:function:search-photos/invocations"
                 responses:
                   default:
                     statusCode: "200"
@@ -229,9 +231,9 @@ Resources:
               security:
               - api_key: []
               x-amazon-apigateway-integration:
-                credentials: !GetAtt ApiGatewayS3FullAccessRole.Arn
+                credentials: "arn:aws:iam::339712725968:role/APIGatewayS3ProxyPolicy"
                 httpMethod: "PUT"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:s3:path/${PhotosBucket}/${IndexPhotosS3Key}"
+                uri: "arn:aws:apigateway:us-east-1:s3:path/{bucket}/{key}"
                 responses:
                   default:
                     statusCode: "200"
@@ -240,7 +242,7 @@ Resources:
                 requestParameters:
                   integration.request.path.key: "method.request.querystring.name"
                   integration.request.header.x-amz-meta-customlabels: "method.request.header.x-amz-meta-customlabels"
-                  integration.request.path.bucket: !Ref PhotosBucket
+                  integration.request.path.bucket: "'photos-cc-a3-cf'"
                 passthroughBehavior: "when_no_templates"
                 contentHandling: "CONVERT_TO_BINARY"
                 type: "aws"
@@ -320,6 +322,7 @@ Resources:
         - "image/jpeg"
         - "image/jpg"
 
+
   ApiGatewayDeployment:
     Type: 'AWS::ApiGateway::Deployment'
     DependsOn:
@@ -333,10 +336,15 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: "photos-cc-a3-cf"
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: 's3:ObjectCreated:*'
-            Function: !GetAtt IndexPhotosLambdaFunction.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      # NotificationConfiguration:
+      #   LambdaConfigurations:
+      #     - Event: 's3:ObjectCreated:*'
+      #       Function: !GetAtt IndexPhotosLambdaFunction.Arn
 
   PhotosBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
@@ -353,7 +361,7 @@ Resources:
           - Sid: "APIGatewayPutObject"
             Effect: "Allow"
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/APIGatewayExecutionRole"
+              AWS: !GetAtt ApiGatewayS3FullAccessRole.Arn
             Action: "s3:PutObject"
             Resource: !Sub "arn:aws:s3:::${PhotosBucket}/*"
   
